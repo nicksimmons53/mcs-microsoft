@@ -101,7 +101,7 @@ router.post('/folder', async function(req, res, next) {
   let tokenRes = await getToken();
   let parentId = req.query.parentId;
   let body = {
-    "name": req.body.name,
+    "name": req.query.folder,
     "folder": {},
     "@microsoft.graph.conflictBehavior": "rename",
   }
