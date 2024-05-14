@@ -74,8 +74,8 @@ router.get('/client-folder', async function(req, res, next) {
   res.send(axiosRes.data);
 });
 
-// Create folder under specified parent
-router.post('/folder', upload.single("file"), async function(req, res, next) {
+// Create file under specified parent
+router.post('/file', upload.single("file"), async function(req, res, next) {
   let tokenRes = await getToken();
   let file = req.file;
   let parentId = req.query.parentId;
@@ -88,6 +88,28 @@ router.post('/folder', upload.single("file"), async function(req, res, next) {
     headers: {
       "Authorization": `Bearer ${tokenRes.access_token}`,
       "Content-Type": "multipart/form-data",
+    }
+  });
+
+  res.send(axiosRes.data);
+});
+
+// Create folder under specified parent
+// query: parentId
+// body: name
+router.post('/folder', async function(req, res, next) {
+  let tokenRes = await getToken();
+  let parentId = req.query.parentId;
+  let body = {
+    "name": req.body.name,
+    "folder": {},
+    "@microsoft.graph.conflictBehavior": "rename",
+  }
+
+  let axiosRes = await axios.post(`${graphAPI}/${process.env.SITE_ID}/drive/items/${parentId}/children`, body, {
+    headers: {
+      "Authorization": `Bearer ${tokenRes.access_token}`,
+      "Content-Type": "application/json",
     }
   });
 
