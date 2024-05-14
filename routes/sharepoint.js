@@ -114,8 +114,8 @@ router.post('/folder', async function(req, res, next) {
       "Content-Type": "application/json",
     }
   });
-
-  res.send(axiosRes.data);
+  res.send({ message: "SUCCESS" })
+  // res.send(axiosRes.data);
 });
 
 module.exports = router;
