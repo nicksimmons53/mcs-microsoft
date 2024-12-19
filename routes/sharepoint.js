@@ -2,20 +2,46 @@ const express = require('express');
 const axios = require("axios");
 const qs = require('qs');
 const multer = require("multer");
+const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
 const router = express.Router();
 const upload = multer();
 const graphAPI = "https://graph.microsoft.com/v1.0/sites";
 require('dotenv').config();
 
-const getToken = async() => {
+const generateAccessToken = () => {
+  let payload = {
+    "aud": process.env.AUTH_URL,
+    "exp": Math.floor(Date.now() / 1000) + 120,
+    "iss": process.env.APP_ID,
+    "jti": crypto.randomUUID(), // add to .env
+    "nbf": Math.floor(Date.now() / 1000),
+    "sub": process.env.APP_ID
+  };
+  let header = {
+    "alg": "PS256",
+    "typ": "JWT",
+    "x5t": process.env.THUMBPRINT
+  };
+
+  return jwt.sign(
+    payload,
+    process.env.PRIVATE_KEY,
+    { header: header }
+  );
+}
+
+// Get token from Graph API
+const getToken = async(token) => {
   let data;
 
   await axios.post("https://login.microsoftonline.com/mcsurfacesinc.onmicrosoft.com/oauth2/v2.0/token", qs.stringify({
-    grant_type: "client_credentials",
-    client_id: process.env.CLIENT_ID,
+    client_id: process.env.APP_ID,
     scope: "https://graph.microsoft.com/.default",
-    client_secret: process.env.CLIENT_SECRET,
+    grant_type: 'client_credentials',
+    client_assertion: token,
+    client_assertion_type: 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
   }))
     .then(res => {
       data = res.data;
@@ -27,24 +53,24 @@ const getToken = async() => {
   return data;
 }
 
-const getTerritoryId = (territory) => {
-  switch (territory.toUpperCase()) {
-    case "AUSTIN":
-      return process.env.SP_AUSTIN_ID;
-    case "DALLAS":
-      return process.env.SP_DALLAS_ID;
-    case "HOUSTON":
-      return process.env.SP_HOUSTON_ID;
-    case "SAN ANTONIO":
-      return process.env.SP_SANANT_ID;
-    default:
-      return;
-  }
-}
+// Get folder by ID
+router.get('/folder', async (req, res) => {
+  let token = generateAccessToken();
+  let tokenRes = await getToken(token);
+
+  let axiosRes = await axios.get(`${graphAPI}/${process.env.SITE_ID}/drive/items/${req.query.id}/children`, {
+    headers: {
+      'Authorization': `Bearer ${tokenRes.access_token}`,
+    }
+  });
+
+  res.send(axiosRes.data);
+})
 
 // Get top level folder in 'Sage' SharePoint Site
 router.get('/top-level', async function(req, res, next) {
-  let tokenRes = await getToken();
+  let token = generateAccessToken();
+  let tokenRes = await getToken(token);
 
   let axiosRes = await axios.get(`${graphAPI}/${process.env.SITE_ID}/drive`, {
     headers: {
@@ -55,17 +81,13 @@ router.get('/top-level', async function(req, res, next) {
   res.send(axiosRes.data);
 });
 
-router.get('/client-folder', async function(req, res, next) {
-  let tokenRes = await getToken();
-  let territory_id;
+// Get list of subfolders
+// query: parentId
+router.get('/folder-children', async function(req, res, next) {
+  let token = generateAccessToken();
+  let tokenRes = await getToken(token);
 
-  if (req.query.territory) {
-    territory_id = getTerritoryId(req.query.territory.toUpperCase());
-  } else {
-    res.send({ message: 'No territory found.' });
-  }
-
-  let axiosRes = await axios.get(`${graphAPI}/${process.env.SITE_ID}/drive/items/${territory_id}/children`, {
+  let axiosRes = await axios.get(`${graphAPI}/${process.env.SITE_ID}/drive/items/${req.query.parentId}/children`, {
     headers: {
       'Authorization': `Bearer ${tokenRes.access_token}`,
     }
@@ -75,8 +97,11 @@ router.get('/client-folder', async function(req, res, next) {
 });
 
 // Create file under specified parent
+// body : formData - file
+// query: parentId
 router.post('/file', upload.single("file"), async function(req, res, next) {
-  let tokenRes = await getToken();
+  let token = generateAccessToken();
+  let tokenRes = await getToken(token);
   let file = req.file;
   let parentId = req.query.parentId;
 
@@ -96,9 +121,10 @@ router.post('/file', upload.single("file"), async function(req, res, next) {
 
 // Create folder under specified parent
 // query: parentId
-// body: name
+// query: name
 router.post('/folder', async function(req, res, next) {
-  let tokenRes = await getToken();
+  let token = generateAccessToken();
+  let tokenRes = await getToken(token);
   let parentId = req.query.parentId;
   let body = {
     "name": req.query.folder,
