@@ -132,6 +132,8 @@ router.post('/folder', async function(req, res, next) {
     "@microsoft.graph.conflictBehavior": "rename",
   }
 
+  console.log(req.query)
+
   let axiosRes = await axios.post(`${graphAPI}/${process.env.SITE_ID}/drive/items/${req.query.parentId}/children`, body, {
     headers: {
       "Authorization": `Bearer ${tokenRes.access_token}`,
