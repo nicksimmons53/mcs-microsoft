@@ -105,7 +105,7 @@ router.post('/file', upload.single("file"), async function(req, res, next) {
   let file = req.file;
   let parentId = req.query.parentId;
 
-  console.log(req)
+  console.log(req.file)
 
   if (file.size >= 250000000) {
     res.send({ message: 'File size is too large.' });
