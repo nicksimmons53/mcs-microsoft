@@ -105,6 +105,8 @@ router.post('/file', upload.single("file"), async function(req, res, next) {
   let file = req.file;
   let parentId = req.query.parentId;
 
+  console.log(file)
+
   if (file.size >= 250000000) {
     res.send({ message: 'File size is too large.' });
   }
@@ -131,8 +133,6 @@ router.post('/folder', async function(req, res, next) {
     "folder": {},
     "@microsoft.graph.conflictBehavior": "rename",
   }
-
-  console.log(req.query)
 
   let axiosRes = await axios.post(`${graphAPI}/${process.env.SITE_ID}/drive/items/${req.query.parentId}/children`, body, {
     headers: {
