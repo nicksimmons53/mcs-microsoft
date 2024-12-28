@@ -121,18 +121,18 @@ router.post('/file', upload.single("file"), async function(req, res, next) {
 
 // Create folder under specified parent
 // query: parentId
-// query: name
+// query: folder
 router.post('/folder', async function(req, res, next) {
   let token = generateAccessToken();
   let tokenRes = await getToken(token);
-  let parentId = req.query.parentId;
+  // let parentId = req.query.parentId;
   let body = {
     "name": req.query.folder,
     "folder": {},
     "@microsoft.graph.conflictBehavior": "rename",
   }
 
-  let axiosRes = await axios.post(`${graphAPI}/${process.env.SITE_ID}/drive/items/${parentId}/children`, body, {
+  let axiosRes = await axios.post(`${graphAPI}/${process.env.SITE_ID}/drive/items/${req.query.parentId}/children`, body, {
     headers: {
       "Authorization": `Bearer ${tokenRes.access_token}`,
       "Content-Type": "application/json",
