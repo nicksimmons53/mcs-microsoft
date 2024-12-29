@@ -114,7 +114,7 @@ router.post('/file', upload.single("file"), async function(req, res, next) {
   let axiosRes = await axios.put(`${graphAPI}/${process.env.SITE_ID}/drive/items/${parentId}:/${file.originalname}:/content`, file, {
     headers: {
       "Authorization": `Bearer ${tokenRes.access_token}`,
-      "Content-Type": file.type,
+      "Content-Type": file.mimetype,
     }
   });
 
